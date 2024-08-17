@@ -102,7 +102,7 @@ func (e *Engine) Recover() error {
 func (e *Engine) Run() {
 	err := e.Recover()
 	if err != nil && !e.IgnoreRecoveryErrors {
-		log.WithError(err).Error("failed to recover, if you don't want to recover, please delete the WAL file")
+		log.WithError(err).Error("failed to recover, if you don't want to recover, please delete the WAL file or set ignore_recovery_errors to true")
 		panic(err)
 	}
 	for {

@@ -1,0 +1,46 @@
+workdir: '${getEnv("TMP") != "" ? getEnv("TMP") : nil ?? "/tmp"}/MyVirtualPrinter'
+write_ahead_logging:
+  enabled: true
+  max_size_mb: 2
+  max_backups: 3
+  max_age_days: 30
+logs:
+  level: "info"
+  filename: "logs/app.log"
+  max_size_mb: 2
+  max_backups: 3
+  max_age_days: 30
+printer:
+  name: MyPrinter
+  monitor_interval_ms: 100
+engine:
+  ignore_recovery_errors: false
+  max_workers: 2
+  handlers:
+    - name: WriteFile
+      config:
+        output: '${getEnv("TMP") != "" ? getEnv("TMP") : nil ?? "/tmp"}/MyVirtualPrinter/tmpfile/${uuid()}.xps'
+    - name: RunExecutable
+      config:
+        executable: ./mutool.exe
+        args:
+          - "convert"
+          - "-o"
+          - ${$env["WriteFile.OutputPath"]}.png
+          - "-F"
+          - "png"
+          - ${$env["WriteFile.OutputPath"]}
+    - name: MergePNGs
+      config:
+        input_file: ${$env["WriteFile.OutputPath"]}.png
+        output_file: ${$env["WriteFile.OutputPath"]}.png
+        remove_old_files: true
+    - name: ReadFile
+      config:
+        input: ${$env["MergePNGs.OutputFile"]}
+        remove_source: true
+    - name: UploadHTTP
+      config:
+        url: https://api.whatsapp.com/send?phone=1234567890&text=Hello%20World
+        type: multipart
+        multipart_field_name: file

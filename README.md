@@ -141,23 +141,24 @@ In Linux, it uses `cups-pdf` and listens for new files in the `~/PDF` folder.
 Then the processor passes it to the engine using a channel to process it.
 
 ### The Engine
-The engine is the core of the program. It processes the print job using the handlers.
-It generates an ID for each handler when parsing them from the configuration.
-It generates the ID using the previous handler's ID and the handler's name.
+The engine is the core of the program. 
+* It processes the print job using the handlers.
+* It generates an ID for each handler when parsing them from the configuration.
+* It generates the ID using the previous handler's ID and the handler's name.
 In that way, when passing the id to the WAL, it can recover the state of the engine.
-Once the engine starts running, it will try to recover the state from the WAL.
+* Once the engine starts running, it will try to recover the state from the WAL.
 If the configuration changes in a way to disrupts the previous order, it will not be able to proceed(unless the `ignore_recovery_errors` is set to true).
-For each job that is coming to the engine, it will copy the job's file to the workdir contents folder.
+* For each job that is coming to the engine, it will copy the job's file to the workdir contents folder. 
 Then it will pass the job to the workers to process it.
-For each handler, it will first log in the WAL that it started processing the job.
-Then, it will deep copy the flow metadata and pass it to the handler.
-If the handler fails, it will log the error in the WAL and retry the job(if the handler has a retry mechanism).
-If the handler succeeds, it will log the success in the WAL and pass the job(along with the new metadata) to the next handler.
-If the job passes all the handlers, it will be considered successful and the engine will delete the job's file from the workdir contents folder.
-Each handler gets a FileHandler that it can use to read and write the job's file. Although, it doesn't exactly read and write the direct file, but a copy of it.
-The engine uses a CopyOnWrite mechanism to prevent data corruption.
-If the handler opened a `Write()` stream, it will copy the file to a new file and pass the new file to the handler.
-If not, the same file will be used for the next handler.
+* For each handler, it will first log in the WAL that it started processing the job.
+* Then, it will deep copy the flow metadata and pass it to the handler.
+* If the handler fails, it will log the error in the WAL and retry the job(if the handler has a retry mechanism).
+* If the handler succeeds, it will log the success in the WAL and pass the job(along with the new metadata) to the next handler.
+* If the job passes all the handlers, it will be considered successful and the engine will delete the job's file from the workdir contents folder.
+* Each handler gets a FileHandler that it can use to read and write the job's file. Although, it doesn't exactly read and write the direct file, but a copy of it.
+* The engine uses a CopyOnWrite mechanism to prevent data corruption.
+* If the handler opened a `Write()` stream, it will copy the file to a new file and pass the new file to the handler.
+* If not, the same file will be used for the next handler.
 
 Pseudo-code for the fileHandler:
 ```

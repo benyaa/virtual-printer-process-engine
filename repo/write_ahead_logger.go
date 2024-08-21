@@ -20,13 +20,39 @@ type LogEntry struct {
 	FlowObject  definitions.EngineFlowObject `json:"flow_object"`
 }
 
-type WriteAheadLogger struct {
+type WriteAheadLogger interface {
+	WriteEntry(entry LogEntry)
+	ReadEntries() ([]LogEntry, error)
+}
+
+type DefaultWriteAheadLogger struct {
 	logger   *log.Logger
 	filePath string
 	enabled  bool
 }
 
-func (l *WriteAheadLogger) ReadEntries() ([]LogEntry, error) {
+func NewWriteAheadLogger(logFilePath string, conf config.WriteAheadLogging) WriteAheadLogger {
+	walLogger := log.New()
+
+	walLogger.Out = &lumberjack.Logger{
+		Filename:   logFilePath,
+		MaxSize:    conf.MaxSizeMB,
+		MaxBackups: conf.MaxBackups,
+		MaxAge:     conf.MaxAgeDays,
+		Compress:   true,
+	}
+
+	walLogger.SetFormatter(&log.JSONFormatter{})
+	walLogger.SetLevel(log.InfoLevel)
+
+	return &DefaultWriteAheadLogger{
+		logger:   walLogger,
+		filePath: logFilePath,
+		enabled:  conf.Enabled,
+	}
+}
+
+func (l *DefaultWriteAheadLogger) ReadEntries() ([]LogEntry, error) {
 	if !l.enabled {
 		return nil, nil
 	}
@@ -66,28 +92,7 @@ func (l *WriteAheadLogger) ReadEntries() ([]LogEntry, error) {
 
 }
 
-func NewWriteAheadLogger(logFilePath string, conf config.WriteAheadLogging) *WriteAheadLogger {
-	walLogger := log.New()
-
-	walLogger.Out = &lumberjack.Logger{
-		Filename:   logFilePath,
-		MaxSize:    conf.MaxSizeMB,
-		MaxBackups: conf.MaxBackups,
-		MaxAge:     conf.MaxAgeDays,
-		Compress:   true,
-	}
-
-	walLogger.SetFormatter(&log.JSONFormatter{})
-	walLogger.SetLevel(log.InfoLevel)
-
-	return &WriteAheadLogger{
-		logger:   walLogger,
-		filePath: logFilePath,
-		enabled:  conf.Enabled,
-	}
-}
-
-func (l *WriteAheadLogger) WriteEntry(entry LogEntry) {
+func (l *DefaultWriteAheadLogger) WriteEntry(entry LogEntry) {
 	if !l.enabled {
 		return
 	}

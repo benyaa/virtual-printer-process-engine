@@ -15,6 +15,7 @@ import (
 type SendHTTPHandler struct {
 	definitions.BaseHandler
 	config *sendHTTPHandlerConfig
+	client utils.HTTPClient
 }
 
 func NewSendHTTPHandler(idPrefix string, c map[string]interface{}) (*SendHTTPHandler, error) {
@@ -22,8 +23,9 @@ func NewSendHTTPHandler(idPrefix string, c map[string]interface{}) (*SendHTTPHan
 		BaseHandler: definitions.BaseHandler{
 			ID: fmt.Sprintf("%s_upload_http", idPrefix),
 		},
+		client: utils.NewHTTPClient(),
 	}
-	err := h.SetConfig(c)
+	err := h.setConfig(c)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +57,7 @@ func (h *SendHTTPHandler) Name() string {
 	return "UploadHTTP"
 }
 
-func (h *SendHTTPHandler) SetConfig(config map[string]interface{}) error {
+func (h *SendHTTPHandler) setConfig(config map[string]interface{}) error {
 	h.config = &sendHTTPHandlerConfig{}
 	err := h.DecodeMap(config, h.config)
 	if err != nil {
@@ -150,8 +152,7 @@ func (h *SendHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler
 		req.Header.Set(key, value)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := h.client.Do(req)
 	if err != nil {
 		log.WithError(err).Errorf("failed to send HTTP request")
 		return nil, fmt.Errorf("failed to send HTTP request: %w", err)

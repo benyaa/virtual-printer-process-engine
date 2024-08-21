@@ -6,7 +6,9 @@ import (
 	"os/exec"
 )
 
-func ExecuteCommand(command string, args ...string) (string, error) {
+var ExecuteCommand = executeCommand
+
+func executeCommand(command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)
 	output, err := cmd.CombinedOutput()
 

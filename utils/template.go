@@ -5,7 +5,9 @@ import (
 	"text/template"
 )
 
-func ParseTemplate(tmpl string, data any) (string, error) {
+var ParseTemplate = parseTemplate
+
+func parseTemplate(tmpl string, data any) (string, error) {
 	parsedTemplate, err := template.New("any").Parse(tmpl)
 	if err != nil {
 		return "", err

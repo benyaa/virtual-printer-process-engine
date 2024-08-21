@@ -93,24 +93,26 @@ func (e *Engine) processHandlers(flow *definitions.EngineFlowObject, fileHandler
 			fileHandler = fileHandler.getNewFileHandler()
 		}
 
-		logEntry := repo.LogEntry{
-			SessionID:   sessionID,
-			HandlerName: "__end__",
-			HandlerID:   "__end__",
-			InputFile:   fileHandler.input,
-			OutputFile:  fileHandler.output,
-			FlowObject:  *flow,
-		}
-		e.writeAheadLogger.WriteEntry(logEntry)
-		err := os.Remove(fileHandler.input)
-		if err != nil {
-			log.WithError(err).Warnf("failed to remove final input file %s", fileHandler.input)
-		}
 	}
 
 	if !resume {
 		log.Warnf("no handlers were processed, the engine will not write the output file")
 	}
+	logEntry := repo.LogEntry{
+		SessionID:   sessionID,
+		HandlerName: "__end__",
+		HandlerID:   "__end__",
+		InputFile:   fileHandler.input,
+		OutputFile:  fileHandler.output,
+		FlowObject:  *flow,
+	}
+	e.writeAheadLogger.WriteEntry(logEntry)
+	err := os.Remove(fileHandler.input)
+	if err != nil {
+		log.WithError(err).Warnf("failed to remove final input file %s", fileHandler.input)
+	}
+
+	log.Info("finished processing handlers for file %s", fileHandler.input)
 
 	return nil
 }

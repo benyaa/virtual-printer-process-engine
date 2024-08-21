@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestEvaluateExpressionSingleExpression(t *testing.T) {
+func TestEvaluateExpression_SingleExpression(t *testing.T) {
 	data := map[string]interface{}{
 		"test": "result",
 	}
@@ -15,7 +15,7 @@ func TestEvaluateExpressionSingleExpression(t *testing.T) {
 	assert.Equal(t, "result", result)
 }
 
-func TestEvaluateExpressionMultipleExpressions(t *testing.T) {
+func TestEvaluateExpression_MultipleExpressions(t *testing.T) {
 	data := map[string]interface{}{
 		"test":  "result",
 		"test2": "result2",
@@ -25,7 +25,7 @@ func TestEvaluateExpressionMultipleExpressions(t *testing.T) {
 	assert.Equal(t, "result/result2/do", result)
 }
 
-func TestEvaluateExpressionWithUUID(t *testing.T) {
+func TestEvaluateExpression_WithUUID(t *testing.T) {
 	data := map[string]interface{}{}
 	result, err := EvaluateExpression("${uuid()}", data)
 	assert.NoError(t, err)
@@ -33,7 +33,7 @@ func TestEvaluateExpressionWithUUID(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestEvaluateExpressionWithBackslashExpression(t *testing.T) {
+func TestEvaluateExpression_WithBackslashExpression(t *testing.T) {
 	data := map[string]interface{}{
 		"test": "result",
 	}
@@ -42,7 +42,7 @@ func TestEvaluateExpressionWithBackslashExpression(t *testing.T) {
 	assert.Equal(t, "${test}", result)
 }
 
-func TestEvaluateExpressionWithDoubleBackslashExpression(t *testing.T) {
+func TestEvaluateExpression_WithDoubleBackslashExpression(t *testing.T) {
 	data := map[string]interface{}{
 		"test": "result",
 	}
@@ -51,7 +51,7 @@ func TestEvaluateExpressionWithDoubleBackslashExpression(t *testing.T) {
 	assert.Equal(t, `\result`, result)
 }
 
-func TestEvaluateExpressionWithBackslashInnerExpression(t *testing.T) {
+func TestEvaluateExpression_WithBackslashInnerExpression(t *testing.T) {
 	data := map[string]interface{}{
 		"test": "result",
 	}

@@ -5,7 +5,9 @@ import (
 	"os"
 )
 
-func CopyFile(src, dst string) error {
+var CopyFile = copyFile
+
+func copyFile(src, dst string) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err

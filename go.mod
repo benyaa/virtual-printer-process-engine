@@ -8,6 +8,7 @@ require (
 	github.com/alitto/pond v1.9.1
 	github.com/expr-lang/expr v1.16.9
 	github.com/getlantern/systray v1.2.2
+	github.com/go-resty/resty/v2 v2.14.0
 	github.com/google/uuid v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
@@ -42,7 +43,9 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	golang.org/x/image v0.18.0 // indirect
+	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

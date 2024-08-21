@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var EvaluateExpression = evaluateExpression
+
 var uuidFunc = expr.Function("uuid", func(params ...any) (any, error) {
 	return uuid.NewString(), nil
 })
@@ -25,7 +27,7 @@ var envVarFunc = expr.Function("getEnv", func(params ...any) (any, error) {
 	return os.Getenv(key), nil
 })
 
-func EvaluateExpression(input string, data map[string]interface{}) (string, error) {
+func evaluateExpression(input string, data map[string]interface{}) (string, error) {
 	var result strings.Builder
 	var expression strings.Builder
 	inExpression := false

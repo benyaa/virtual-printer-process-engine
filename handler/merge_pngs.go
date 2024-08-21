@@ -117,7 +117,7 @@ func (h *MergePNGsHandler) Handle(info *definitions.EngineFlowObject, fileHandle
 		imgFilePath := filepath.Join(dir, fmt.Sprintf("%s%d%s", base, i, ext))
 		err = os.Remove(imgFilePath)
 		if err != nil {
-			log.Warnf("failed to remove temporary file %s: %w", imgFilePath, err)
+			log.WithError(err).Warnf("failed to remove temporary file %s", imgFilePath)
 		}
 	}
 

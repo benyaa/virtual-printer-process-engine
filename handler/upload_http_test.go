@@ -17,8 +17,13 @@ type MockHTTPClient struct {
 	mock.Mock
 }
 
+func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	args := m.Called(req)
+	return args.Get(0).(*http.Response), args.Error(1)
+}
+
+// MockEngineFileHandler is a mock implementation of EngineFileHandler for testing
 type MockEngineFileHandler struct {
-	mock.Mock
 	reader io.Reader
 	writer *bytes.Buffer
 }
@@ -32,11 +37,7 @@ func (m *MockEngineFileHandler) Write() (io.Writer, error) {
 }
 
 func (m *MockEngineFileHandler) Close() {
-}
 
-func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
-	args := m.Called(req)
-	return args.Get(0).(*http.Response), args.Error(1)
 }
 
 func TestSendHTTPHandler_Multipart(t *testing.T) {
@@ -63,9 +64,10 @@ func TestSendHTTPHandler_Multipart(t *testing.T) {
 		client:      mockClient, // Inject the mock client
 	}
 	err := h.setConfig(map[string]interface{}{
-		"url":                  "http://example.com/upload",
-		"type":                 "multipart",
-		"multipart_field_name": "file",
+		"url":                      "http://example.com/upload",
+		"type":                     "multipart",
+		"multipart_field_name":     "file",
+		"put_response_as_contents": true, // Ensure this is set
 	})
 	assert.NoError(t, err)
 
@@ -108,9 +110,10 @@ func TestSendHTTPHandler_Base64(t *testing.T) {
 		client:      mockClient, // Inject the mock client
 	}
 	err := h.setConfig(map[string]interface{}{
-		"url":                "http://example.com/upload",
-		"type":               "base64",
-		"base64_body_format": "data:text/plain;base64,{{.Base64Contents}}",
+		"url":                      "http://example.com/upload",
+		"type":                     "base64",
+		"base64_body_format":       "data:text/plain;base64,{{.Base64Contents}}",
+		"put_response_as_contents": true, // Ensure this is set
 	})
 	assert.NoError(t, err)
 
@@ -132,7 +135,7 @@ func TestSendHTTPHandler_Base64(t *testing.T) {
 func TestSendHTTPHandler_Error(t *testing.T) {
 	// Mock the HTTP client to simulate an error
 	mockClient := new(MockHTTPClient)
-	mockClient.On("Do", mock.AnythingOfType("*http.Request")).Return(nil, assert.AnError)
+	mockClient.On("Do", mock.AnythingOfType("*http.Request")).Return((*http.Response)(nil), assert.AnError)
 
 	// Mock file handler
 	mockFileHandler := &MockEngineFileHandler{
@@ -146,9 +149,10 @@ func TestSendHTTPHandler_Error(t *testing.T) {
 		client:      mockClient, // Inject the mock client
 	}
 	err := h.setConfig(map[string]interface{}{
-		"url":                "http://example.com/upload",
-		"type":               "base64",
-		"base64_body_format": "data:text/plain;base64,{{.Base64Contents}}",
+		"url":                      "http://example.com/upload",
+		"type":                     "base64",
+		"base64_body_format":       "data:text/plain;base64,{{.Base64Contents}}",
+		"put_response_as_contents": true, // Ensure this is set
 	})
 	assert.NoError(t, err)
 

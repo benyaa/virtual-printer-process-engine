@@ -106,6 +106,7 @@ Uploads the object to an HTTP server.
 - `type` - the type of the upload. Can be `multipart` or `base64`. Doesn't support expressions.
 - `put_response_as_contents` - whether to put the response as the object's contents. Doesn't support expressions.
 - `multipart_field_name` - the field name for the multipart upload. Supports expressions.
+- `multipart_filename` - the filename for the multipart upload. Supports expressions.
 - `headers` - the headers to send. Supports expressions.
 - `base64_body_format` - the format of the body when using base64. Can be `file` or `string`. To enter the base64 string, use `{{.Base64Contents}}`. Supports expressions.
 - `write_response_to_metadata` - whether to write the response body to the metadata. Doesn't support expressions.

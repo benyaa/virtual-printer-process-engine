@@ -41,33 +41,27 @@ func (m *MockEngineFileHandler) Close() {
 }
 
 func TestSendHTTPHandler_Multipart(t *testing.T) {
-	// Create a mock HTTP response
 	mockResp := &http.Response{
 		StatusCode: 200,
 		Body:       ioutil.NopCloser(bytes.NewBufferString("mock response")),
 		Header:     make(http.Header),
 	}
 
-	// Mock the HTTP client
 	mockClient := new(MockHTTPClient)
 	mockClient.On("Do", mock.AnythingOfType("*http.Request")).Return(mockResp, nil)
 
-	// Mock file handler
 	mockFileHandler := &MockEngineFileHandler{
 		reader: bytes.NewBufferString("mock file content"),
 		writer: new(bytes.Buffer),
 	}
 
-	// Create the handler with the mock client
 	h := &SendHTTPHandler{
 		BaseHandler: definitions.BaseHandler{ID: "test_upload_http"},
-		client:      mockClient, // Inject the mock client
 	}
 	err := h.setConfig(map[string]interface{}{
-		"url":                      "http://example.com/upload",
-		"type":                     "multipart",
-		"multipart_field_name":     "file",
-		"put_response_as_contents": true, // Ensure this is set
+		"url":                  "http://example.com/upload",
+		"type":                 "multipart",
+		"multipart_field_name": "file",
 	})
 	assert.NoError(t, err)
 
@@ -75,7 +69,6 @@ func TestSendHTTPHandler_Multipart(t *testing.T) {
 		Metadata: map[string]interface{}{},
 	}
 
-	// Run the handler
 	newInfo, err := h.Handle(info, mockFileHandler)
 	assert.NoError(t, err)
 
@@ -87,7 +80,6 @@ func TestSendHTTPHandler_Multipart(t *testing.T) {
 }
 
 func TestSendHTTPHandler_Base64(t *testing.T) {
-	// Create a mock HTTP response
 	mockResp := &http.Response{
 		StatusCode: 200,
 		Body:       ioutil.NopCloser(bytes.NewBufferString("mock response")),
@@ -104,16 +96,15 @@ func TestSendHTTPHandler_Base64(t *testing.T) {
 		writer: new(bytes.Buffer),
 	}
 
-	// Create the handler with the mock client
 	h := &SendHTTPHandler{
 		BaseHandler: definitions.BaseHandler{ID: "test_upload_http"},
-		client:      mockClient, // Inject the mock client
+		client:      mockClient,
 	}
 	err := h.setConfig(map[string]interface{}{
 		"url":                      "http://example.com/upload",
 		"type":                     "base64",
 		"base64_body_format":       "data:text/plain;base64,{{.Base64Contents}}",
-		"put_response_as_contents": true, // Ensure this is set
+		"put_response_as_contents": true,
 	})
 	assert.NoError(t, err)
 

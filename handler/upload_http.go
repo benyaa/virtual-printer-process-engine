@@ -46,6 +46,7 @@ type sendHTTPHandlerConfig struct {
 	PutResponseAsContents   bool              `mapstructure:"put_response_as_contents"`
 	MultipartFieldName      string            `mapstructure:"multipart_field_name,omitempty"`
 	MultipartFilename       string            `mapstructure:"multipart_filename,omitempty"`
+	MultipartContentType    string            `mapstructure:"multipart_content_type,omitempty"`
 	Base64BodyFormat        string            `mapstructure:"base64_body_format,omitempty"`
 	WriteResponseToMetadata bool              `mapstructure:"write_response_to_metadata,omitempty"`
 }
@@ -82,6 +83,10 @@ func (h *SendHTTPHandler) setConfig(config map[string]interface{}) error {
 	if h.config.MultipartFilename == "" {
 		h.config.MultipartFilename = h.config.MultipartFieldName
 	}
+
+	if h.config.MultipartContentType == "" {
+		h.config.MultipartContentType = "application/octet-stream"
+	}
 	return nil
 }
 
@@ -106,29 +111,47 @@ func (h *SendHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler
 		log.WithError(err).Errorf("failed to read file")
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
+	url := h.config.URL
+	url, err = info.EvaluateExpression(url)
+	if err != nil {
+		log.WithError(err).Errorf("failed to evaluate URL")
+		return nil, fmt.Errorf("failed to evaluate URL: %w", err)
+	}
+	req, err := http.NewRequest("POST", url, pr)
+	if err != nil {
+		log.WithError(err).Errorf("failed to create HTTP request")
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
 	switch h.config.Type {
 	case sendFileMultipart:
 		log.Debugf("Sending file as multipart")
+		writer := multipart.NewWriter(pw)
+		contentType := writer.FormDataContentType()
+		req.Header.Set("Content-Type", contentType)
+		log.Debugf("generating multipart with content type %s", contentType)
 		go func() {
-			contentType, err := h.generateMultipart(info, pw, reader)
+			err := h.generateMultipart(info, writer, reader)
 			if err != nil {
 				pw.CloseWithError(err)
+				return
 			}
 
+			log.Debugf("setting content type as %s", contentType)
 			pw.Close()
-			if h.config.ExtraHeaders["Content-Type"] == "" {
-				h.config.ExtraHeaders["Content-Type"] = contentType
-			}
 		}()
 	case sendFileBase64:
+		log.Debugf("Sending file as base64")
 		var base64Content bytes.Buffer
 		base64Writer := base64.NewEncoder(base64.StdEncoding, &base64Content)
 		defer base64Writer.Close()
+		log.Debugf("copying file to base64")
 		_, err = io.Copy(base64Writer, reader)
 		if err != nil {
 			log.WithError(err).Errorf("failed to copy file to base64")
 			return nil, fmt.Errorf("failed to copy file to base64: %w", err)
 		}
+		log.Debugf("closing base64 writer")
 		formattedContent, err := h.formatBase64Content(base64Content.String(), info)
 		if err != nil {
 			log.WithError(err).Errorf("failed to format base64 content")
@@ -142,17 +165,6 @@ func (h *SendHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler
 			}
 			pw.Close()
 		}()
-	}
-	url := h.config.URL
-	url, err = info.EvaluateExpression(url)
-	if err != nil {
-		log.WithError(err).Errorf("failed to evaluate URL")
-		return nil, fmt.Errorf("failed to evaluate URL: %w", err)
-	}
-	req, err := http.NewRequest("POST", url, pr)
-	if err != nil {
-		log.WithError(err).Errorf("failed to create HTTP request")
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
 	for key, value := range h.config.ExtraHeaders {
@@ -212,53 +224,57 @@ func (h *SendHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler
 	return info, nil
 }
 
-func (h *SendHTTPHandler) generateMultipart(info *definitions.EngineFlowObject, pw *io.PipeWriter, reader io.Reader) (string, error) {
-	writer := multipart.NewWriter(pw)
-	log.Debugf("evaluating field name: %s", h.config.MultipartFieldName)
-	fieldName, err := info.EvaluateExpression(h.config.MultipartFieldName)
+func (h *SendHTTPHandler) generateMultipart(info *definitions.EngineFlowObject, writer *multipart.Writer, reader io.Reader) error {
+	fieldName, err := evaluateAndLog(info, h.config.MultipartFieldName, "field name")
 	if err != nil {
-		pw.CloseWithError(err)
-		log.WithError(err).Errorf("failed to evaluate field name")
-		return "", fmt.Errorf("failed to evaluate field name: %w", err)
+		return err
 	}
-	log.Debugf("evaluated field name: %s", h.config.MultipartFieldName)
 
-	log.Debugf("evaluating filename: %s", h.config.MultipartFilename)
-
-	filename, err := info.EvaluateExpression(h.config.MultipartFilename)
+	filename, err := evaluateAndLog(info, h.config.MultipartFilename, "filename")
 	if err != nil {
-		pw.CloseWithError(err)
-		log.WithError(err).Errorf("failed to evaluate filename")
-		return "", fmt.Errorf("failed to evaluate filename: %w", err)
+		return err
 	}
-	log.Debugf("evaluated filename: %s", h.config.MultipartFilename)
 
+	_, err = createFormFile(writer, fieldName, filename, reader, h.config.MultipartContentType)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("closing writer")
+	err = writer.Close()
+	if err != nil {
+		log.WithError(err).Errorf("failed to close writer")
+		return fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	return nil
+}
+
+func evaluateAndLog(info *definitions.EngineFlowObject, expression, name string) (string, error) {
+	value, err := info.EvaluateExpression(expression)
+	if err != nil {
+		log.WithError(err).Errorf("failed to evaluate %s", name)
+		return "", fmt.Errorf("failed to evaluate %s: %w", name, err)
+	}
+	log.Debugf("evaluated %s: %s", name, value)
+	return value, nil
+}
+
+func createFormFile(writer *multipart.Writer, fieldName, filename string, reader io.Reader, contentType string) (io.Writer, error) {
 	log.Debugf("creating form file: %s", filename)
-	part, err := writer.CreateFormFile(fieldName, filename)
+	part, err := writer.CreatePart(map[string][]string{
+		"Content-Disposition": {"form-data; name=\"" + fieldName + "\"; filename=\"" + filename + "\""},
+		"Content-Type":        {contentType},
+	})
 	if err != nil {
-		pw.CloseWithError(err)
 		log.WithError(err).Errorf("failed to create form file")
-		return "", fmt.Errorf("failed to create form file: %w", err)
+		return nil, fmt.Errorf("failed to create form file: %w", err)
 	}
 	log.Debugf("copying file to form")
 	_, err = io.Copy(part, reader)
 	if err != nil {
-		pw.CloseWithError(err)
 		log.WithError(err).Errorf("failed to copy file to form")
-		return "", fmt.Errorf("failed to copy file to form: %w", err)
+		return nil, fmt.Errorf("failed to copy file to form: %w", err)
 	}
-
-	log.Debugf("closing writer")
-	contentType := writer.FormDataContentType()
-	log.Debugf("content type: %s", contentType)
-	err = writer.Close()
-	if err != nil {
-		pw.CloseWithError(err)
-		log.WithError(err).Errorf("failed to close writer")
-		return "", fmt.Errorf("failed to close writer: %w", err)
-	}
-
-	log.Debugf("returning content type: %s", contentType)
-
-	return contentType, nil
+	return part, nil
 }

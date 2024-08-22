@@ -2,14 +2,13 @@ package handler
 
 import (
 	"bytes"
+	"github.com/benyaa/virtual-printer-process-engine/definitions"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"testing"
-
-	"github.com/benyaa/virtual-printer-process-engine/definitions"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 // MockHTTPClient is a mock implementation of HTTPClient for testing

@@ -59,8 +59,8 @@ func runAsAService() {
 
 func onReady() {
 	systray.SetIcon(icon.Data)
-	systray.SetTitle("PrintToWhatsapp")
-	systray.SetTooltip("PrintToWhatsapp")
+	systray.SetTitle("Virtual Printer Process Engine")
+	systray.SetTooltip("Virtual Printer Process Engine")
 	isRunningAtStartup, err := osutils.IsRunningAtStartup()
 	if err != nil {
 		log.WithError(err).Errorf("error checking if running at startup")
@@ -141,6 +141,7 @@ func getConfig() config.Config {
 	}
 	conf, err := config.ParseConfig(configLocation)
 	if err != nil {
+		displayErrorMessage("Error", "Could not parse config: "+err.Error())
 		log.WithError(err).Fatal(context.Background(), "could not parse config")
 	}
 	return conf

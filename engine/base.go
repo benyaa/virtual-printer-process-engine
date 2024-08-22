@@ -50,9 +50,11 @@ func (e *Engine) Run() {
 	for {
 		select {
 		case <-e.ctx.Done():
+			log.Infof("stopping engine")
 			e.workerPool.Stop()
 			return
 		case i := <-e.filesChannel:
+			log.Debugf("received file %s", i.Filepath)
 			e.workerPool.Submit(func() {
 				e.handleFile(i)
 			})
@@ -63,6 +65,7 @@ func (e *Engine) Run() {
 func (e *Engine) handleFile(i definitions.PrintInfo) {
 	var err error
 	sessionID := uuid.New()
+	log.Debugf("handling file %s with sessionID %s", i.Filepath, sessionID)
 	flow := &definitions.EngineFlowObject{
 		Pages:    i.Pages,
 		Metadata: map[string]interface{}{},
@@ -77,15 +80,19 @@ func (e *Engine) handleFile(i definitions.PrintInfo) {
 		OutputFile:  input,
 		FlowObject:  *flow,
 	}
+	log.Debugf("writing WAL entry for handler __init__")
 	e.writeAheadLogger.WriteEntry(walEntry)
+	log.Debugf("copying file %s to contents folder", i.Filepath)
 	err = utils.CopyFile(i.Filepath, input)
 	if err != nil {
 		log.WithError(err).Errorf("failed to copy file %s to contents folder", i.Filepath)
 		return
 	}
+	log.Debugf("copied file %s to contents folder", i.Filepath)
 
 	fileHandler := NewDefaultEngineFileHandler(input)
 
+	log.Debugf("processing handlers")
 	err = e.processHandlers(flow, fileHandler, "", sessionID)
 	if err != nil {
 		log.WithError(err).Error("failed to process handlers")

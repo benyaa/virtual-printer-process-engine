@@ -191,6 +191,7 @@ func (p *processor) copySpoolFileAsXps(jobId uint32) (string, error) {
 	spoolDir := `C:\Windows\System32\spool\PRINTERS`
 	var spoolFilePath string
 
+	log.Debugf("copying spool file for job %d", jobId)
 	// Locate the .spl file associated with the job
 	err := filepath.Walk(spoolDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -199,6 +200,7 @@ func (p *processor) copySpoolFileAsXps(jobId uint32) (string, error) {
 		if !info.IsDir() && strings.ToLower(filepath.Ext(info.Name())) == ".spl" {
 			// Naively assume the .spl file is associated with our job
 			spoolFilePath = path
+			log.Debugf("found spool file: %s", spoolFilePath)
 			return nil
 		}
 		return nil
@@ -206,13 +208,16 @@ func (p *processor) copySpoolFileAsXps(jobId uint32) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	log.Debugf("spool file for job %d: %s", jobId, spoolFilePath)
 
 	if spoolFilePath == "" {
 		return "", fmt.Errorf("spool file for job %d not found", jobId)
 	}
 
+	log.Debugf("copying spool file for job %d", jobId)
 	// Copy the file to a new location with a new name
 	destPath := fmt.Sprintf(p.destinationFolder+`\Job_%d_%s.xps`, jobId, uuid.New().String()[0:8])
+	log.Debugf("copying spool file %s to %s", spoolFilePath, destPath)
 	cSrc := C.CString(spoolFilePath)
 	cDst := C.CString(destPath)
 	defer C.free(unsafe.Pointer(cSrc))
@@ -221,6 +226,7 @@ func (p *processor) copySpoolFileAsXps(jobId uint32) (string, error) {
 	if result != 0 {
 		return "", fmt.Errorf("failed to copy spool file: %d", result)
 	}
+	log.Debugf("copied spool file for job %d to %s", jobId, destPath)
 
 	return destPath, nil
 }
@@ -295,6 +301,7 @@ func (p *processor) RunService(monitorInterval time.Duration) {
 						log.Errorf("failed to get XPS file for job %d: %v", job.JobId, err)
 						continue
 					}
+					log.Debugf("XPS file for job %d: %s", job.JobId, xpsFile)
 					cPrinterName := C.CString(p.printerName)
 					defer C.free(unsafe.Pointer(cPrinterName))
 					cJobId := C.DWORD(job.JobId)
@@ -303,7 +310,9 @@ func (p *processor) RunService(monitorInterval time.Duration) {
 						Pages:    int(C.getPrintJobPages(hPrinter, cJobId)),
 					}
 					C.DeletePrintJob(cPrinterName, cJobId)
+					log.Debugf("deleted job %d", job.JobId)
 					p.ch <- printerInfo
+					log.Debugf("sent print info for job %d", job.JobId)
 				}
 			}
 

@@ -41,6 +41,7 @@ engine:
         remove_source: true
     - name: UploadHTTP
       config:
-        url: https://api.whatsapp.com/send?phone=1234567890&text=Hello%20World
+        url: https://example.com/upload
         type: multipart
         multipart_field_name: file
+        multipart_filename: ${uuid()}.png

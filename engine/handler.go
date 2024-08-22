@@ -15,7 +15,9 @@ import (
 func getHandlers(config config.Config) []handlerContext {
 	var handlers []handlerContext
 	previousID := ""
+	log.Debugf("getting handlers")
 	for _, currentHandler := range config.Engine.Handlers {
+		log.Debugf("getting handler %s", currentHandler.Name)
 		h, err := handler.GetHandler(currentHandler, previousID)
 		if err != nil {
 			log.WithError(err).Errorf("failed to get handler %s", currentHandler.Name)
@@ -23,7 +25,9 @@ func getHandlers(config config.Config) []handlerContext {
 		}
 		previousID = h.GetID()
 		retry := currentHandler.Retry
+		log.Debugf("initializing retry defaults for handler %s", h.Name())
 		initRetryDefaults(&retry)
+		log.Debugf("adding handler %s to engine", h.Name())
 		handlers = append(handlers, handlerContext{
 			handler:        h,
 			retryMechanism: retry,

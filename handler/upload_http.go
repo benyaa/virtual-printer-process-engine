@@ -134,12 +134,14 @@ func (h *SendHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler
 			log.WithError(err).Errorf("failed to format base64 content")
 			return nil, fmt.Errorf("failed to format base64 content: %w", err)
 		}
-		_, err = pw.Write([]byte(formattedContent))
-		if err != nil {
-			pw.CloseWithError(err)
-			log.WithError(err).Errorf("failed to write formatted content")
-			return nil, fmt.Errorf("failed to write formatted content: %w", err)
-		}
+		go func() {
+			_, err = pw.Write([]byte(formattedContent))
+			if err != nil {
+				pw.CloseWithError(err)
+				log.WithError(err).Errorf("failed to write formatted content")
+			}
+			pw.Close()
+		}()
 	}
 	url := h.config.URL
 	url, err = info.EvaluateExpression(url)

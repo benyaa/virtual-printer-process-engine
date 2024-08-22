@@ -25,6 +25,7 @@ Whatever is in `config.yaml` in this repo is the configuration I conjured up for
 
 Each handler gets a metadata map that it can write to and read from. You can also utilize it using the `${$env["MyVar]}` expression.
 For example, if `WriteFile` writes to `WriteFile.OutputPath`, you can use it in the configuration like this: `${$env["WriteFile.OutputPath"]}`.
+It can be escaped using `\$` if you want to use it as a string. For example: `"\${$env["WriteFile.OutputPath"]}"` which will output: `${$env["WriteFile.OutputPath"]}`.
 
 ### Example
 ```yaml
@@ -56,6 +57,7 @@ engine:
         method: POST
         type: multipart
         multipart_field_name: file
+        multipart_filename: '${$env["WriteFile.OutputPath"]}'
       retry:
         max_retries: 3
         backoff_interval: 1 # back off interval in seconds
@@ -106,9 +108,9 @@ Uploads the object to an HTTP server.
 - `type` - the type of the upload. Can be `multipart` or `base64`. Doesn't support expressions.
 - `put_response_as_contents` - whether to put the response as the object's contents. Doesn't support expressions.
 - `multipart_field_name` - the field name for the multipart upload. Supports expressions.
-- `multipart_filename` - the filename for the multipart upload. Supports expressions.
+- `multipart_filename` - the filename for the multipart upload. If empty, will use multipart_field_name. Supports expressions.
 - `headers` - the headers to send. Supports expressions.
-- `base64_body_format` - the format of the body when using base64. Can be `file` or `string`. To enter the base64 string, use `{{.Base64Contents}}`. Supports expressions.
+- `base64_body_format` - the format of the body when using base64. To enter the base64 string, use `{{.Base64Contents}}`. For example: `{"data": "{{.Base64Contents}}"}` Supports expressions.
 - `write_response_to_metadata` - whether to write the response body to the metadata. Doesn't support expressions.
 
 #### Metadata:

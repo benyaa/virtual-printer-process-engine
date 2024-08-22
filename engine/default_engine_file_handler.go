@@ -10,8 +10,8 @@ import (
 type DefaultEngineFileHandler struct {
 	input  string
 	output string
-	reader io.Reader
-	writer io.Writer
+	reader *os.File
+	writer *os.File
 }
 
 func (d *DefaultEngineFileHandler) Read() (io.Reader, error) {
@@ -40,14 +40,12 @@ func (d *DefaultEngineFileHandler) Write() (io.Writer, error) {
 
 func (d *DefaultEngineFileHandler) Close() {
 	if d.reader != nil {
-		if r, ok := d.reader.(*os.File); ok {
-			r.Close()
-		}
+		d.reader.Close()
+		d.reader = nil
 	}
 	if d.writer != nil {
-		if w, ok := d.writer.(*os.File); ok {
-			w.Close()
-		}
+		d.writer.Close()
+		d.writer = nil
 	}
 }
 

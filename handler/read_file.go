@@ -70,8 +70,12 @@ func (h *ReadFileHandler) Handle(info *definitions.EngineFlowObject, fileHandler
 		return nil, err
 	}
 
-	reader.Close()
+	err = reader.Close()
 	if h.config.RemoveSource {
+		if err != nil {
+			log.WithError(err).Errorf("failed to close input file %s", inputPath)
+			return nil, err
+		}
 		log.Debugf("removing source file %s", inputPath)
 		err = os.Remove(inputPath)
 		if err != nil {

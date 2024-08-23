@@ -35,13 +35,19 @@ engine:
         input_file: ${$env["WriteFile.OutputPath"]}.png
         output_file: ${$env["WriteFile.OutputPath"]}.png
         remove_old_files: true
+    - name: ConvertPNGToJPEG
+      config:
+        input_file: ${$env["MergePNGs.OutputFile"]}
+        output_file: ${$env["MergePNGs.OutputFile"]}.jpg
+        remove_original: true
     - name: ReadFile
       config:
-        input: ${$env["MergePNGs.OutputFile"]}
+        input: ${$env["ConvertPNGToJPEG.OutputFile"]}
         remove_source: true
     - name: UploadHTTP
       config:
         url: https://example.com/upload
         type: multipart
         multipart_field_name: file
+        use_streaming: false
         multipart_filename: ${uuid()}.png

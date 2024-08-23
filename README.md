@@ -110,8 +110,9 @@ Uploads the object to an HTTP server.
 - `multipart_field_name` - the field name for the multipart upload. Supports expressions.
 - `multipart_filename` - the filename for the multipart upload. If empty, will use multipart_field_name. Supports expressions.
 - `headers` - the headers to send. Supports expressions.
-- `base64_body_format` - the format of the body when using base64. To enter the base64 string, use `{{.Base64Contents}}`. For example: `{"data": "{{.Base64Contents}}"}` Supports expressions.
+- `base64_body_format` - the format of the body when using base64. To enter the base64 string, use `{{.Base64Contents}}`. For example: `{"data": "{{.Base64Contents}}"}`. Supports expressions.
 - `write_response_to_metadata` - whether to write the response body to the metadata. Doesn't support expressions.
+- `use_streaming` - whether to use streaming for the upload(in case you don't know how to support chunked data). Doesn't support expressions.
 
 #### Metadata:
 Writes:
@@ -119,6 +120,18 @@ Writes:
 - `UploadHTTP.ResponseBody` - the response body(if `write_response_to_metadata` is true).
 - `UploadHTTP.ResponseHeaders` - the response headers(if `write_response_to_metadata` is true).
 - `UploadHTTP.URL` - the URL used for the upload.
+
+
+### ConvertPNGToJPEG
+Converts a PNG file to a JPEG file.
+#### Configuration
+- `input_file` - the input file path. Supports expressions.
+- `output_file` - the output file path. Supports expressions.
+- `remove_original` - whether to remove the original file after converting it. Doesn't support expressions.
+
+#### Metadata:
+Writes:
+- `ConvertPNGToJPEG.OutputFile` - the output file path.
 
 ## Build
 ### Windows

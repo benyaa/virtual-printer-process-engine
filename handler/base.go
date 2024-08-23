@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/benyaa/virtual-printer-process-engine/config"
 	"github.com/benyaa/virtual-printer-process-engine/definitions"
+	"github.com/benyaa/virtual-printer-process-engine/handler/uploadhttp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,7 +21,9 @@ func GetHandler(c config.HandlerConfig, idPrefix string) (definitions.Handler, e
 	case "ReadFile":
 		handler, err = NewReadFileHandler(idPrefix, c.Config)
 	case "UploadHTTP":
-		handler, err = NewSendHTTPHandler(idPrefix, c.Config)
+		handler, err = uploadhttp.NewUploadHTTPHandler(idPrefix, c.Config)
+	case "ConvertPNGToJPEG":
+		handler, err = NewConvertPNGToJPEGHandler(idPrefix, c.Config)
 	default:
 		return nil, fmt.Errorf("unknown handler name")
 	}

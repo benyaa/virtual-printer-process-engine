@@ -1,8 +1,6 @@
-package handler
+package uploadhttp
 
 import (
-	"bytes"
-	"encoding/base64"
 	"fmt"
 	"github.com/benyaa/virtual-printer-process-engine/definitions"
 	"github.com/benyaa/virtual-printer-process-engine/utils"
@@ -12,14 +10,14 @@ import (
 	"net/http"
 )
 
-type SendHTTPHandler struct {
+type UploadHTTPHandler struct {
 	definitions.BaseHandler
 	config *sendHTTPHandlerConfig
 	client utils.HTTPClient
 }
 
-func NewSendHTTPHandler(idPrefix string, c map[string]interface{}) (*SendHTTPHandler, error) {
-	h := &SendHTTPHandler{
+func NewUploadHTTPHandler(idPrefix string, c map[string]interface{}) (*UploadHTTPHandler, error) {
+	h := &UploadHTTPHandler{
 		BaseHandler: definitions.BaseHandler{
 			ID: fmt.Sprintf("%s_upload_http", idPrefix),
 		},
@@ -49,17 +47,18 @@ type sendHTTPHandlerConfig struct {
 	MultipartContentType    string            `mapstructure:"multipart_content_type,omitempty"`
 	Base64BodyFormat        string            `mapstructure:"base64_body_format,omitempty"`
 	WriteResponseToMetadata bool              `mapstructure:"write_response_to_metadata,omitempty"`
+	UseStreaming            bool              `mapstructure:"use_streaming,omitempty"`
 }
 
 type bas64FormatTemplate struct {
 	Base64Contents string
 }
 
-func (h *SendHTTPHandler) Name() string {
+func (h *UploadHTTPHandler) Name() string {
 	return "UploadHTTP"
 }
 
-func (h *SendHTTPHandler) setConfig(config map[string]interface{}) error {
+func (h *UploadHTTPHandler) setConfig(config map[string]interface{}) error {
 	h.config = &sendHTTPHandlerConfig{}
 	err := h.DecodeMap(config, h.config)
 	if err != nil {
@@ -90,7 +89,7 @@ func (h *SendHTTPHandler) setConfig(config map[string]interface{}) error {
 	return nil
 }
 
-func (h *SendHTTPHandler) formatBase64Content(base64Content string, info *definitions.EngineFlowObject) (string, error) {
+func (h *UploadHTTPHandler) formatBase64Content(base64Content string, info *definitions.EngineFlowObject) (string, error) {
 	base64Format, err := info.EvaluateExpression(h.config.Base64BodyFormat)
 	if err != nil {
 		return "", fmt.Errorf("failed to evaluate base64 format: %w", err)
@@ -104,8 +103,7 @@ func (h *SendHTTPHandler) formatBase64Content(base64Content string, info *defini
 	return formattedContent, nil
 }
 
-func (h *SendHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler definitions.EngineFileHandler) (*definitions.EngineFlowObject, error) {
-	pr, pw := io.Pipe()
+func (h *UploadHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler definitions.EngineFileHandler) (*definitions.EngineFlowObject, error) {
 	reader, err := fileHandler.Read()
 	if err != nil {
 		log.WithError(err).Errorf("failed to read file")
@@ -117,54 +115,19 @@ func (h *SendHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler
 		log.WithError(err).Errorf("failed to evaluate URL")
 		return nil, fmt.Errorf("failed to evaluate URL: %w", err)
 	}
-	req, err := http.NewRequest("POST", url, pr)
-	if err != nil {
-		log.WithError(err).Errorf("failed to create HTTP request")
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
-	}
 
-	switch h.config.Type {
-	case sendFileMultipart:
-		log.Debugf("Sending file as multipart")
-		writer := multipart.NewWriter(pw)
-		contentType := writer.FormDataContentType()
-		req.Header.Set("Content-Type", contentType)
-		log.Debugf("generating multipart with content type %s", contentType)
-		go func() {
-			err := h.generateMultipart(info, writer, reader)
-			if err != nil {
-				pw.CloseWithError(err)
-				return
-			}
+	var req *http.Request
 
-			log.Debugf("setting content type as %s", contentType)
-			pw.Close()
-		}()
-	case sendFileBase64:
-		log.Debugf("Sending file as base64")
-		var base64Content bytes.Buffer
-		base64Writer := base64.NewEncoder(base64.StdEncoding, &base64Content)
-		defer base64Writer.Close()
-		log.Debugf("copying file to base64")
-		_, err = io.Copy(base64Writer, reader)
+	if h.config.UseStreaming {
+		req, err = h.generateStreamingRequest(url, info, reader)
 		if err != nil {
-			log.WithError(err).Errorf("failed to copy file to base64")
-			return nil, fmt.Errorf("failed to copy file to base64: %w", err)
+			return nil, err
 		}
-		log.Debugf("closing base64 writer")
-		formattedContent, err := h.formatBase64Content(base64Content.String(), info)
+	} else {
+		req, err = h.generateMemoryLoaderRequest(url, info, reader)
 		if err != nil {
-			log.WithError(err).Errorf("failed to format base64 content")
-			return nil, fmt.Errorf("failed to format base64 content: %w", err)
+			return nil, err
 		}
-		go func() {
-			_, err = pw.Write([]byte(formattedContent))
-			if err != nil {
-				pw.CloseWithError(err)
-				log.WithError(err).Errorf("failed to write formatted content")
-			}
-			pw.Close()
-		}()
 	}
 
 	for key, value := range h.config.ExtraHeaders {
@@ -224,7 +187,7 @@ func (h *SendHTTPHandler) Handle(info *definitions.EngineFlowObject, fileHandler
 	return info, nil
 }
 
-func (h *SendHTTPHandler) generateMultipart(info *definitions.EngineFlowObject, writer *multipart.Writer, reader io.Reader) error {
+func (h *UploadHTTPHandler) generateMultipart(info *definitions.EngineFlowObject, writer *multipart.Writer, reader io.Reader) error {
 	fieldName, err := evaluateAndLog(info, h.config.MultipartFieldName, "field name")
 	if err != nil {
 		return err

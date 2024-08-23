@@ -1,4 +1,4 @@
-package handler
+package uploadhttp
 
 import (
 	"bytes"
@@ -54,7 +54,7 @@ func TestSendHTTPHandler_Multipart(t *testing.T) {
 		writer: new(bytes.Buffer),
 	}
 
-	h := &SendHTTPHandler{
+	h := &UploadHTTPHandler{
 		BaseHandler: definitions.BaseHandler{ID: "test_upload_http"},
 	}
 	err := h.setConfig(map[string]interface{}{
@@ -95,7 +95,7 @@ func TestSendHTTPHandler_Base64(t *testing.T) {
 		writer: new(bytes.Buffer),
 	}
 
-	h := &SendHTTPHandler{
+	h := &UploadHTTPHandler{
 		BaseHandler: definitions.BaseHandler{ID: "test_upload_http"},
 		client:      mockClient,
 	}
@@ -134,7 +134,7 @@ func TestSendHTTPHandler_Error(t *testing.T) {
 	}
 
 	// Create the handler with the mock client
-	h := &SendHTTPHandler{
+	h := &UploadHTTPHandler{
 		BaseHandler: definitions.BaseHandler{ID: "test_upload_http"},
 		client:      mockClient, // Inject the mock client
 	}

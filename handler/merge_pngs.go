@@ -89,7 +89,6 @@ func (h *MergePNGsHandler) Handle(info *definitions.EngineFlowObject, fileHandle
 		if err != nil {
 			return nil, fmt.Errorf("failed to open image %s: %w", imgFilePath, err)
 		}
-		defer imgFile.Close()
 
 		img, err := png.Decode(imgFile)
 		if err != nil {
@@ -99,6 +98,7 @@ func (h *MergePNGsHandler) Handle(info *definitions.EngineFlowObject, fileHandle
 		// Calculate the position where the image should be drawn
 		offset := image.Pt(0, (i-1)*firstImg.Bounds().Dy())
 		draw.Draw(finalImage, img.Bounds().Add(offset), img, image.Point{0, 0}, draw.Src)
+		imgFile.Close()
 	}
 
 	// Save the final image to the output file
